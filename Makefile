@@ -1,4 +1,4 @@
-.PHONY: all test clean
+.PHONY: all server test clean
 
 all: server
 
