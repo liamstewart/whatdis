@@ -3,6 +3,8 @@ package whatdis
 import (
 	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -27,10 +29,6 @@ type Whatdis struct {
 	mux    *http.ServeMux
 }
 
-func (s *Whatdis) Handler() http.Handler {
-	return s.mux
-}
-
 func NewWhatdis(config *Config, logger *zap.SugaredLogger) *Whatdis {
 	mux := http.NewServeMux()
 
@@ -39,14 +37,18 @@ func NewWhatdis(config *Config, logger *zap.SugaredLogger) *Whatdis {
 		mux:    mux,
 	}
 
-	for _, v := range config.Endpoints {
-		mux.HandleFunc(fmt.Sprintf("/%s", v.Path), makeHandler(v.Status, &v.Response))
+	for _, endpoint := range config.Endpoints {
+		s.addHandler(&endpoint)
 	}
 
 	return s
 }
 
-func makeHandler(status int, resp *Response) func(http.ResponseWriter, *http.Request) {
+func (s *Whatdis) Handler() http.Handler {
+	return s.mux
+}
+
+func (s *Whatdis) addHandler(endpoint *Endpoint) {
 	h := func(w http.ResponseWriter, req *http.Request) {
 		accept := "text/plain"
 		accepts := req.Header["Accept"]
@@ -54,17 +56,32 @@ func makeHandler(status int, resp *Response) func(http.ResponseWriter, *http.Req
 			accept = accepts[0]
 		}
 
+		sleep := "0"
+		sleeps := req.Header["X-Whatdis-Sleep"]
+		if len(sleeps) > 0 {
+			sleep = sleeps[0]
+		}
+		v, err := strconv.ParseInt(sleep, 10, 32)
+		if err != nil {
+			s.logger.Error("failed to parse", zap.Error(err))
+			v = 0
+		}
+		if v > 0 {
+			time.Sleep(time.Duration(v) * time.Millisecond)
+		}
+
 		headers := w.Header()
 		if accept == "application/json" {
 			headers.Set("Accept", "application/json")
 		}
-		w.WriteHeader(status)
+		w.WriteHeader(endpoint.Status)
 
 		if accept == "application/json" {
-			fmt.Fprintf(w, "%s", resp.Json)
+			fmt.Fprintf(w, "%s", endpoint.Response.Json)
 		} else {
-			fmt.Fprintf(w, "%s", resp.Text)
+			fmt.Fprintf(w, "%s", endpoint.Response.Text)
 		}
 	}
-	return h
+
+	s.mux.HandleFunc(fmt.Sprintf("/%s", endpoint.Path), h)
 }
