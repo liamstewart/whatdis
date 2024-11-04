@@ -1,3 +1,33 @@
+[endpoints.delete]
+path = "delete"
+methods = ["DELETE"]
+status = 200
+
+[endpoints.get]
+path = "get"
+methods = ["GET"]
+status = 200
+
+[endpoints.head]
+path = "head"
+methods = ["HEAD"]
+status = 200
+
+[endpoints.patch]
+path = "patch"
+methods = ["PATCH"]
+status = 200
+
+[endpoints.post]
+path = "post"
+methods = ["POST"]
+status = 200
+
+[endpoints.put]
+path = "put"
+methods = ["PUT"]
+status = 200
+
 [endpoints.100]
 path = "100"
 status = 100

@@ -3,6 +3,7 @@ package whatdis
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -17,6 +18,7 @@ type Endpoint struct {
 	Path     string
 	Status   int
 	Response Response
+	Methods  []string
 }
 
 type Response struct {
@@ -48,8 +50,18 @@ func (s *Whatdis) Handler() http.Handler {
 	return s.mux
 }
 
+func (s *Whatdis) badRequest(w http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(http.StatusBadRequest)
+	fmt.Fprintf(w, "%s", "bad request")
+}
+
 func (s *Whatdis) addHandler(endpoint *Endpoint) {
 	h := func(w http.ResponseWriter, req *http.Request) {
+		if len(endpoint.Methods) > 0 && !slices.Contains(endpoint.Methods, req.Method) {
+			s.badRequest(w, req)
+			return
+		}
+
 		accept := "text/plain"
 		accepts := req.Header["Accept"]
 		if len(accepts) > 0 {

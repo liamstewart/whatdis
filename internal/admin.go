@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -113,10 +112,4 @@ func (s *Admin) handleQuit(w http.ResponseWriter, r *http.Request) {
 func (s *Admin) handleAbort(w http.ResponseWriter, r *http.Request) {
 	s.logger.Info("abort received")
 	os.Exit(255)
-}
-
-func prettify(b []byte) []byte {
-	var out bytes.Buffer
-	json.Indent(&out, b, "", "  ")
-	return out.Bytes()
 }

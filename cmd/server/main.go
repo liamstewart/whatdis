@@ -23,7 +23,7 @@ func main() {
 	ctx, stop := context.WithCancel(context.Background())
 
 	adminService := internal.NewAdmin(stop, sugar)
-	adminServer := internal.ListenAndServe(adminService, 8081, stop, sugar)
+	adminServer := internal.ListenAndServe(adminService.Handler(), 8081, stop, sugar)
 
 	f := "example.toml"
 	var config whatdis.Config
@@ -34,7 +34,7 @@ func main() {
 	}
 
 	whatdisService := whatdis.NewWhatdis(&config, sugar)
-	whatdisServer := internal.ListenAndServe(whatdisService, 8080, stop, sugar)
+	whatdisServer := internal.ListenAndServe(internal.LoggingHandler(whatdisService.Handler(), sugar), 8080, stop, sugar)
 
 	internal.SetupSignalHandler(stop)
 
