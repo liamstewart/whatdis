@@ -1,4 +1,4 @@
-.PHONY: all server test clean
+.PHONY: all server test clean lint
 
 all: server
 
@@ -10,3 +10,6 @@ test:
 
 clean:
 	rm -f server
+
+lint:
+	golangci-lint run ./...
