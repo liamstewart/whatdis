@@ -2,10 +2,21 @@ package internal
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/felixge/httpsnoop"
 	"go.uber.org/zap"
 )
+
+func SleepHandler(h http.Handler, d Distribution) http.Handler {
+	m := func(w http.ResponseWriter, req *http.Request) {
+		v := max(0, d.Sample())
+		time.Sleep(time.Duration(v) * time.Millisecond)
+		h.ServeHTTP(w, req)
+	}
+
+	return http.HandlerFunc(m)
+}
 
 func RecoveryHandler(h http.Handler) http.Handler {
 	m := func(w http.ResponseWriter, req *http.Request) {

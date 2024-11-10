@@ -68,9 +68,26 @@ path = "500"
 status = 500
 response.text = "500 Internal Server Error"
 response.json = "{\"code\":500,\"description\":\"Internal Server Error\"}"
+[[endpoints.500.middleware]]
+middleware = "sleep"
+[endpoints.500.middleware.sleep]
+distribution = "uniform"
+[endpoints.500.middleware.sleep.uniform]
+a = 50
+b = 150
 
 [endpoints.hello]
 path = "hello"
 status = 200
 response.text = "Hello, world!"
 response.json = '{"message":"Hello, world!"}'
+[[endpoints.hello.middleware]]
+middleware = "sleep"
+[endpoints.hello.middleware.sleep]
+distribution = "normal"
+[endpoints.hello.middleware.sleep.uniform]
+a = 500
+b = 2500
+[endpoints.hello.middleware.sleep.normal]
+mean = 1000
+stddev = 250

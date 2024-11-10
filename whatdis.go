@@ -2,11 +2,13 @@ package whatdis
 
 import (
 	"fmt"
+	rand "math/rand/v2"
 	"net/http"
 	"slices"
 	"strconv"
 	"time"
 
+	"github.com/liamstewart/whatdis/internal"
 	"go.uber.org/zap"
 )
 
@@ -15,10 +17,32 @@ type Config struct {
 }
 
 type Endpoint struct {
-	Path     string
-	Status   int
-	Response Response
-	Methods  []string
+	Path       string
+	Status     int
+	Response   Response
+	Methods    []string
+	Middleware []Middleware
+}
+
+type Middleware struct {
+	Middleware string
+	Sleep      Sleep
+}
+
+type Sleep struct {
+	Distribution string
+	Uniform      Uniform
+	Normal       Normal
+}
+
+type Uniform struct {
+	A int64
+	B int64
+}
+
+type Normal struct {
+	Mean   float64
+	StdDev float64
 }
 
 type Response struct {
@@ -56,7 +80,7 @@ func (s *Whatdis) badRequest(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Whatdis) addHandler(endpoint *Endpoint) {
-	h := func(w http.ResponseWriter, req *http.Request) {
+	m := func(w http.ResponseWriter, req *http.Request) {
 		if len(endpoint.Methods) > 0 && !slices.Contains(endpoint.Methods, req.Method) {
 			s.badRequest(w, req)
 			return
@@ -95,5 +119,33 @@ func (s *Whatdis) addHandler(endpoint *Endpoint) {
 		}
 	}
 
-	s.mux.HandleFunc(fmt.Sprintf("/%s", endpoint.Path), h)
+	var h http.Handler
+	h = http.HandlerFunc(m)
+
+	r := rand.New(rand.NewPCG(1, 2))
+
+	for i := 0; i < len(endpoint.Middleware); i++ {
+		m := endpoint.Middleware[i]
+		if m.Middleware == "sleep" {
+			var d internal.Distribution
+			if m.Sleep.Distribution == "uniform" {
+				d = internal.NewUniform(
+					m.Sleep.Uniform.A,
+					m.Sleep.Uniform.B,
+					r,
+				)
+			} else if m.Sleep.Distribution == "normal" {
+				d = internal.NewNormal(
+					m.Sleep.Normal.Mean,
+					m.Sleep.Normal.StdDev,
+					r,
+				)
+			} else {
+				panic("unsupported distribution")
+			}
+			h = internal.SleepHandler(h, d)
+		}
+	}
+
+	s.mux.Handle(fmt.Sprintf("/%s", endpoint.Path), h)
 }
