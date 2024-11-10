@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/honeycombio/otel-config-go/otelconfig"
 	"github.com/liamstewart/whatdis"
 	"github.com/liamstewart/whatdis/internal"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 )
 
@@ -20,21 +22,35 @@ func main() {
 	defer undoStdLogger()
 	sugar := logger.Sugar()
 
+	otelShutdown, err := otelconfig.ConfigureOpenTelemetry()
+	if err != nil {
+		sugar.Fatalf("error setting up OTel SDK - %e", err)
+	}
+	defer otelShutdown()
+
 	ctx, stop := context.WithCancel(context.Background())
 
 	adminService := internal.NewAdmin(stop, sugar)
-	adminServer := internal.ListenAndServe(adminService.Handler(), 8081, stop, sugar)
+	wrappedAdminHandler := otelhttp.NewHandler(
+		internal.LoggingHandler(adminService.Handler(), sugar, "admin"),
+		"admin",
+	)
+	adminServer := internal.ListenAndServe(wrappedAdminHandler, 8081, stop, sugar)
 
 	f := "example.toml"
 	var config whatdis.Config
-	_, err := toml.DecodeFile(f, &config)
+	_, err = toml.DecodeFile(f, &config)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
 	whatdisService := whatdis.NewWhatdis(&config, sugar)
-	whatdisServer := internal.ListenAndServe(internal.LoggingHandler(whatdisService.Handler(), sugar), 8080, stop, sugar)
+	wrappedWhatdisHandler := otelhttp.NewHandler(
+		internal.LoggingHandler(whatdisService.Handler(), sugar, "server"),
+		"server",
+	)
+	whatdisServer := internal.ListenAndServe(wrappedWhatdisHandler, 8080, stop, sugar)
 
 	internal.SetupSignalHandler(stop)
 

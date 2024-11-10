@@ -33,12 +33,14 @@ func RecoveryHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(m)
 }
 
-func LoggingHandler(h http.Handler, logger *zap.SugaredLogger) http.Handler {
+// TODO: pass additional static fields?
+// TODO: force omit caller, other fields?
+func LoggingHandler(h http.Handler, logger *zap.SugaredLogger, operation string) http.Handler {
 	wrapped := func(w http.ResponseWriter, req *http.Request) {
 		m := httpsnoop.CaptureMetrics(h, w, req)
-		// TODO: force omit caller, other fields?
 		logger.Infow(
 			"request",
+			"name", operation,
 			"request_url", req.URL,
 			"protocol", req.Proto,
 			"request_method", req.Method,

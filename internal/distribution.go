@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	rand "math/rand/v2"
 )
 
@@ -33,7 +32,6 @@ func NewUniform(a int64, b int64, r *rand.Rand) *Uniform {
 
 func (d *Uniform) Sample() int64 {
 	w := d.b - d.a
-	fmt.Printf("%d %d %d\n", d.b, d.a, w)
 	return d.a + d.r.Int64N(w)
 }
 
