@@ -4,8 +4,8 @@ import (
 	rand "math/rand/v2"
 )
 
-type Distribution interface {
-	Sample() int64
+type RandomVariable[T any] interface {
+	Sample() T
 }
 
 type Uniform struct {
@@ -18,6 +18,16 @@ type Normal struct {
 	mean   float64
 	stddev float64
 	r      *rand.Rand
+}
+
+type Poisson struct {
+	lambda int64
+	r      *rand.Rand
+}
+
+type Bernoulli struct {
+	p float64
+	r *rand.Rand
 }
 
 func NewUniform(a int64, b int64, r *rand.Rand) *Uniform {
@@ -47,4 +57,17 @@ func NewNormal(mean float64, stddev float64, r *rand.Rand) *Normal {
 
 func (d *Normal) Sample() int64 {
 	return int64(d.r.NormFloat64()*d.stddev + d.mean)
+}
+
+func NewBernoulli(p float64, r *rand.Rand) *Bernoulli {
+	d := &Bernoulli{
+		p: p,
+		r: r,
+	}
+
+	return d
+}
+
+func (d *Bernoulli) Sample() bool {
+	return d.r.Float64() < d.p
 }

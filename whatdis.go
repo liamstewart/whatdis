@@ -27,12 +27,18 @@ type Endpoint struct {
 type Middleware struct {
 	Middleware string
 	Sleep      Sleep
+	Fail       Fail
 }
 
 type Sleep struct {
 	Distribution string
 	Uniform      Uniform
 	Normal       Normal
+}
+
+type Fail struct {
+	Distribution string
+	Bernoulli    Bernoulli
 }
 
 type Uniform struct {
@@ -43,6 +49,10 @@ type Uniform struct {
 type Normal struct {
 	Mean   float64
 	StdDev float64
+}
+
+type Bernoulli struct {
+	P float64
 }
 
 type Response struct {
@@ -127,7 +137,7 @@ func (s *Whatdis) addHandler(endpoint *Endpoint) {
 	for i := 0; i < len(endpoint.Middleware); i++ {
 		m := endpoint.Middleware[i]
 		if m.Middleware == "sleep" {
-			var d internal.Distribution
+			var d internal.RandomVariable[int64]
 			if m.Sleep.Distribution == "uniform" {
 				d = internal.NewUniform(
 					m.Sleep.Uniform.A,
@@ -144,6 +154,14 @@ func (s *Whatdis) addHandler(endpoint *Endpoint) {
 				panic("unsupported distribution")
 			}
 			h = internal.SleepHandler(h, d)
+		} else if m.Middleware == "fail" {
+			var d internal.RandomVariable[bool]
+			if m.Fail.Distribution == "bernoulli" {
+				d = internal.NewBernoulli(m.Fail.Bernoulli.P, r)
+			} else {
+				panic("unsupported distribution")
+			}
+			h = internal.FailHandler(h, d)
 		}
 	}
 

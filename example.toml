@@ -91,3 +91,9 @@ b = 2500
 [endpoints.hello.middleware.sleep.normal]
 mean = 1000
 stddev = 250
+[[endpoints.hello.middleware]]
+middleware = "fail"
+[endpoints.hello.middleware.fail]
+distribution = "bernoulli"
+[endpoints.hello.middleware.fail.bernoulli]
+p = 0.5

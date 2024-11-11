@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -8,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func SleepHandler(h http.Handler, d Distribution) http.Handler {
+func SleepHandler(h http.Handler, d RandomVariable[int64]) http.Handler {
 	m := func(w http.ResponseWriter, req *http.Request) {
 		v := max(0, d.Sample())
 		time.Sleep(time.Duration(v) * time.Millisecond)
@@ -50,6 +51,22 @@ func LoggingHandler(h http.Handler, logger *zap.SugaredLogger, operation string)
 			"user_id", "-",
 			"user_name", "-",
 		)
+	}
+
+	return http.HandlerFunc(wrapped)
+}
+
+// TODO: configurable failure response
+func FailHandler(h http.Handler, rv RandomVariable[bool]) http.Handler {
+	wrapped := func(w http.ResponseWriter, req *http.Request) {
+		if rv.Sample() {
+			headers := w.Header()
+			headers.Set("Accept", "application/json")
+			w.WriteHeader(500)
+			fmt.Fprintf(w, "%s", "{\"code\":500}")
+		} else {
+			h.ServeHTTP(w, req)
+		}
 	}
 
 	return http.HandlerFunc(wrapped)
