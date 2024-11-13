@@ -1,73 +1,81 @@
 [endpoints.delete]
 path = "delete"
 methods = ["DELETE"]
-status = 200
+action.fixed.status = 200
 
 [endpoints.get]
 path = "get"
 methods = ["GET"]
-status = 200
+action.fixed.status = 200
 
 [endpoints.head]
 path = "head"
 methods = ["HEAD"]
-status = 200
+action.fixed.status = 200
 
 [endpoints.patch]
 path = "patch"
 methods = ["PATCH"]
-status = 200
+action.fixed.status = 200
 
 [endpoints.post]
 path = "post"
 methods = ["POST"]
-status = 200
+action.fixed.status = 200
 
 [endpoints.put]
 path = "put"
 methods = ["PUT"]
-status = 200
+action.fixed.status = 200
 
 [endpoints.100]
 path = "100"
-status = 100
-response.text = "100 Continue"
+action.fixed.status = 100
+action.fixed.text = "100 Continue"
 
 [endpoints.200]
 path = "200"
+[endpoints.200.action]
+action = "fixed"
+[endpoints.200.action.fixed]
 status = 200
-response.text = "200 OK"
-response.json = '{"code":200,"description":"OK"}'
+text = "200 OK"
+json = '{"code":200,"description":"OK"}'
 
 [endpoints.201]
 path = "201"
-status = 201
-response.text = "201 Created"
-response.json = '{"code":201,"description":"Created"}'
+action.action = "fixed"
+action.fixed.status = 201
+action.fixed.text = "201 Created"
+action.fixed.json = '{"code":201,"description":"Created"}'
 
 [endpoints.202]
 path = "202"
-status = 202
-response.text = "202 Accepted"
-response.json = '{"code":202,"description":"Accepted"}'
+action.action = "fixed"
+action.fixed.status = 202
+action.fixed.text = "202 Accepted"
+action.fixed.json = '{"code":202,"description":"Accepted"}'
 
 [endpoints.404]
 path = "404"
-status = 404
-response.text = "404 Not Found"
-response.json = '{"code":404,"description":"Not Found"}'
+action.action = "fixed"
+action.fixed.status = 404
+action.fixed.text = "404 Not Found"
+action.fixed.json = '{"code":404,"description":"Not Found"}'
 
 [endpoints.418]
 path = "418"
-status = 418
-response.text = "418 I'm a teapot"
-response.json = "{\"code\":418,\"description\":\"I'm a teapot\"}"
+action.action = "fixed"
+action.fixed.status = 418
+action.fixed.text = "418 I'm a teapot"
+action.fixed.json = "{\"code\":418,\"description\":\"I'm a teapot\"}"
 
 [endpoints.500]
 path = "500"
-status = 500
-response.text = "500 Internal Server Error"
-response.json = "{\"code\":500,\"description\":\"Internal Server Error\"}"
+action.action = "fixed"
+action.fixed.status = 500
+action.fixed.text = "500 Internal Server Error"
+action.fixed.json = "{\"code\":500,\"description\":\"Internal Server Error\"}"
 [[endpoints.500.middleware]]
 middleware = "sleep"
 [endpoints.500.middleware.sleep]
@@ -78,9 +86,10 @@ b = 150
 
 [endpoints.hello]
 path = "hello"
-status = 200
-response.text = "Hello, world!"
-response.json = '{"message":"Hello, world!"}'
+action.action = "fixed"
+action.fixed.status = 200
+action.fixed.text = "Hello, world!"
+action.fixed.json = '{"message":"Hello, world!"}'
 [[endpoints.hello.middleware]]
 middleware = "sleep"
 [endpoints.hello.middleware.sleep]
@@ -97,3 +106,10 @@ middleware = "fail"
 distribution = "bernoulli"
 [endpoints.hello.middleware.fail.bernoulli]
 p = 0.5
+
+[endpoints.joke]
+path = "joke"
+action.action = "request"
+action.request.method = "GET"
+action.request.url = "https://icanhazdadjoke.com"
+action.request.headers = [ "Accept: application/json" ]

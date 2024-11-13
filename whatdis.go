@@ -2,6 +2,7 @@ package whatdis
 
 import (
 	"fmt"
+	"io"
 	rand "math/rand/v2"
 	"net/http"
 	"slices"
@@ -18,8 +19,7 @@ type Config struct {
 
 type Endpoint struct {
 	Path       string
-	Status     int
-	Response   Response
+	Action     Action
 	Methods    []string
 	Middleware []Middleware
 }
@@ -55,9 +55,22 @@ type Bernoulli struct {
 	P float64
 }
 
-type Response struct {
-	Text string
-	Json string
+type Action struct {
+	Action  string
+	Fixed   FixedResponse
+	Request Request
+}
+
+type FixedResponse struct {
+	Status int
+	Text   string
+	Json   string
+}
+
+type Request struct {
+	Url     string
+	Method  string
+	Headers []string
 }
 
 type Whatdis struct {
@@ -89,6 +102,55 @@ func (s *Whatdis) badRequest(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "%s", "bad request")
 }
 
+func (s *Whatdis) fixedResponse(action *FixedResponse, w http.ResponseWriter, req *http.Request) {
+	accept := "text/plain"
+	accepts := req.Header["Accept"]
+	if len(accepts) > 0 {
+		accept = accepts[0]
+	}
+
+	headers := w.Header()
+	if accept == "application/json" {
+		headers.Set("Accept", "application/json")
+	}
+	w.WriteHeader(action.Status)
+
+	if accept == "application/json" {
+		fmt.Fprintf(w, "%s", action.Json)
+	} else {
+		fmt.Fprintf(w, "%s", action.Text)
+	}
+}
+
+// TODO: support request headers
+// TODO: copy response headers
+func (s *Whatdis) request(action *Request, w http.ResponseWriter, req *http.Request) {
+	var err error
+	client := &http.Client{
+		Timeout: time.Duration(5) * time.Second,
+	}
+	r, err := http.NewRequest(action.Method, action.Url, nil)
+	if err != nil {
+		http.Error(w, "error making request", http.StatusInternalServerError)
+		return
+	}
+	r.Header.Add("Accept", "application/json")
+
+	resp, err := client.Do(r)
+	if err != nil {
+		http.Error(w, "error making request", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	w.WriteHeader(resp.StatusCode)
+	_, err = io.Copy(w, resp.Body)
+	if err != nil {
+		http.Error(w, "error reading body", http.StatusInternalServerError)
+		return
+	}
+}
+
 func (s *Whatdis) addHandler(endpoint *Endpoint) {
 	m := func(w http.ResponseWriter, req *http.Request) {
 		if len(endpoint.Methods) > 0 && !slices.Contains(endpoint.Methods, req.Method) {
@@ -96,12 +158,7 @@ func (s *Whatdis) addHandler(endpoint *Endpoint) {
 			return
 		}
 
-		accept := "text/plain"
-		accepts := req.Header["Accept"]
-		if len(accepts) > 0 {
-			accept = accepts[0]
-		}
-
+		// TODO: extract this out into a filter
 		sleep := "0"
 		sleeps := req.Header["X-Whatdis-Sleep"]
 		if len(sleeps) > 0 {
@@ -116,16 +173,12 @@ func (s *Whatdis) addHandler(endpoint *Endpoint) {
 			time.Sleep(time.Duration(v) * time.Millisecond)
 		}
 
-		headers := w.Header()
-		if accept == "application/json" {
-			headers.Set("Accept", "application/json")
-		}
-		w.WriteHeader(endpoint.Status)
-
-		if accept == "application/json" {
-			fmt.Fprintf(w, "%s", endpoint.Response.Json)
+		if endpoint.Action.Action == "fixed" {
+			s.fixedResponse(&endpoint.Action.Fixed, w, req)
+		} else if endpoint.Action.Action == "request" {
+			s.request(&endpoint.Action.Request, w, req)
 		} else {
-			fmt.Fprintf(w, "%s", endpoint.Response.Text)
+			panic("unsupported action type")
 		}
 	}
 
