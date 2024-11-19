@@ -1,4 +1,4 @@
-.PHONY: all server test clean lint
+.PHONY: all server test clean lint publish
 
 all: server
 
@@ -13,3 +13,6 @@ clean:
 
 lint:
 	golangci-lint run ./...
+
+publish:
+	ko build --bare ./cmd/server
